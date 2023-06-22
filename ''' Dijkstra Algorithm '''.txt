@@ -1,0 +1,63 @@
+''' Dijkstra Algorithm '''
+
+import math
+import csv
+from collections import defaultdict
+
+STAR_COORDINATES_FILE = "/content/Coordinates.csv"
+STAR_DISTANCES_FILE = "/content/distances.csv"
+
+def calculate_distance(x1, y1, z1, x2, y2, z2):
+    return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2)
+
+star_coordinates = {}
+star_adjacency_list = defaultdict(list)
+
+with open(STAR_COORDINATES_FILE, 'r') as file:
+    reader = csv.reader(file)
+    next(reader)
+    for star_name, x, y, z in reader:
+        star_coordinates[star_name] = (int(x), int(y), int(z))
+
+with open(STAR_DISTANCES_FILE, "r") as file:
+    reader = csv.reader(file)
+    for source, destination, dist in reader:
+        star_adjacency_list[source].append((destination, int(dist)))
+
+START_STAR = "Sun"
+
+def dijkstra(destination_star):
+    open_set = set([START_STAR])
+    distances = defaultdict(lambda: float('inf'))
+    distances[START_STAR] = 0
+    came_from = {}
+    total_distances = defaultdict(lambda: float('inf'))
+    total_distances[START_STAR] = 0
+
+    while open_set:
+        current_star = min(open_set, key=lambda star: distances[star])
+        open_set.remove(current_star)
+
+        if current_star == destination_star:
+            path = []
+            while current_star in came_from:
+                path.append(current_star)
+                current_star = came_from[current_star]
+            path.append(START_STAR)
+            path.reverse()
+            return path, total_distances[destination_star]
+
+        for neighbor_star, neighbor_dist in star_adjacency_list[current_star]:
+            tentative_distance = distances[current_star] + neighbor_dist
+            if tentative_distance < distances[neighbor_star]:
+                distances[neighbor_star] = tentative_distance
+                came_from[neighbor_star] = current_star
+                total_distances[neighbor_star] = total_distances[current_star] + neighbor_dist
+                open_set.add(neighbor_star)
+
+    return dijkstra("61 Virginis")
+
+DESTINATION_STAR = "61 Virginis"
+path, total_distance = dijkstra(DESTINATION_STAR)
+print("Shortest path:", " --> ".join(path))
+print("Total distance:", total_distance)

@@ -1,0 +1,116 @@
+ ***differ in terms of result and/or time
+
+import math # provides mathematical modules and functions
+import csv # reading and writing csv file
+from collections import defaultdict # class from collection and d_dict is subclass of default value
+import time
+
+STAR_COORDINATES_FILE = "/content/Coordinates.csv"
+STAR_DISTANCES_FILE = "/content/distances.csv"
+
+def calculate_distance(x1, y1, z1, x2, y2, z2): # calculate eucliden distance between 2 points
+    return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2)
+
+def calculate_heuristic(x1, y1, z1, x2, y2, z2): # calculate heuristic distances between two points
+    return calculate_distance(x1, y1, z1, x2, y2, z2)
+
+star_coordinates = {} # store star coordinates
+star_adjacency_list = defaultdict(list) # adjacency list of stars and their distances of default values.
+
+with open(STAR_COORDINATES_FILE, 'r') as file: # file ta k just open krlm read krar jnno kaz sesh hoye gele automatically close hoye jabe
+    reader = csv.reader(file) # read kora start kore dise csv file theke
+    next(reader) # 1st ta baad e read krte thakbe one by one
+    for star_name, x, y, z in reader: # csv file theke iterate kore eglu variable er moddhe nibe
+        star_coordinates[star_name] = (int(x), int(y), int(z)) # star_cordinates er moddhe value gulo store krtese
+
+with open(STAR_DISTANCES_FILE, "r") as file: # distance file ta open krlm read krar jnno kaz sesh hoye gele automatically close hoye jabe
+    reader = csv.reader(file) # read kora start kore dise csv file theke
+    for source, destination, dist in reader:  # csv file theke iterate kore eglu variable er moddhe nibe
+        star_adjacency_list[source].append((destination, int(dist))) # list er mddhe destination star and er destination add krbe
+
+START_STAR = "TRAPPIST-1" # start star from TRAPPIST-1
+DESTINATION_STAR = "55 Cancri" # TRAPPIST-1 theke 55 Cancri porjonto jabe
+
+def dijkstra(destination_star):
+    open_set = set([START_STAR])
+    distances = defaultdict(lambda: float('inf'))
+    distances[START_STAR] = 0
+    came_from = {}
+    total_distances = defaultdict(lambda: float('inf'))
+    total_distances[START_STAR] = 0
+
+    while open_set:
+        current_star = min(open_set, key=lambda star: distances[star])
+        open_set.remove(current_star)
+
+        if current_star == destination_star:
+            path = []
+            while current_star in came_from:
+                path.append(current_star)
+                current_star = came_from[current_star]
+            path.append(START_STAR)
+            path.reverse()
+            return path, total_distances[destination_star]
+
+        for neighbor_star, neighbor_dist in star_adjacency_list[current_star]:
+            tentative_distance = distances[current_star] + neighbor_dist
+            if tentative_distance < distances[neighbor_star]:
+                distances[neighbor_star] = tentative_distance
+                came_from[neighbor_star] = current_star
+                total_distances[neighbor_star] = total_distances[current_star] + neighbor_dist
+                open_set.add(neighbor_star)
+
+    return dijkstra("61 Virginis")
+
+def astar(destination_star): # astar is a funtion and destination_star is a parameter
+    open_list = [(0, START_STAR)] #list open holo tuple type
+    distances = defaultdict(lambda: float('inf')) # shortest distance from starting star
+    distances[START_STAR] = 0 # distance star 0
+    came_from = {} # ata optimal path gulo k store krbe atr moddhe
+    total_distances = defaultdict(lambda: float('inf')) #defaultdict means default value of infinity,total distances from starting star to each star
+    total_distances[START_STAR] = 0
+
+    while open_list:
+        _, current_star = min(open_list) # finds the min score of open list and assign it in the current star
+        open_list = [star for star in open_list if star[1] != current_star] #ekhane current star ta baad porbe coz open list er moddhe new list create hobe
+        if current_star == destination_star: # jdi current star and destination star equal hoy tahole optimal path dibe
+            path = [] # empty list of optimal path
+            while current_star in came_from: # came_from ditionary te asha ag porjnto loop cholbe
+                path.append(current_star)  # path list er mddhe current star gulo add hote thakbe
+                current_star = came_from[current_star] #ektu age j bllm loop cholbe asha ag prjnto so ekhane eshe update hocche
+            path.append(START_STAR) # start_star path er mddhe add hobe
+            path.reverse() # correct order e path ta  pawar jnno
+            return path, total_distances[destination_star]
+
+        for neighbor_star, neighbor_dist in star_adjacency_list[current_star]:
+            tentative_distance = distances[current_star] + neighbor_dist
+            if tentative_distance < distances[neighbor_star]:
+                distances[neighbor_star] = tentative_distance
+                f_score = tentative_distance + calculate_heuristic(*star_coordinates[neighbor_star], *star_coordinates[destination_star])
+                open_list.append((f_score, neighbor_star))
+                came_from[neighbor_star] = current_star
+                total_distances[neighbor_star] = total_distances[current_star] + neighbor_dist
+
+    return astar("61 Virginis")
+
+# Dijkstra  Algorithm
+start_time = time.time()
+path_dijkstra, total_distance_dijkstra = dijkstra(DESTINATION_STAR)
+end_time = time.time()
+execution_time_dijkstra = end_time - start_time
+
+# A star Algorithm
+start_time = time.time()
+path_astar, total_distance_astar = astar(DESTINATION_STAR)
+end_time = time.time()
+execution_time_astar = end_time - start_time
+
+print("Dijkstra's Algorithm:")
+print("Shortest path:", " -> ".join(path_dijkstra))
+print("Total distance:", total_distance_dijkstra)
+print("Execution time:", execution_time_dijkstra, "sec")
+
+print("A Star Algorithm:")
+print("Shortest path:", " -> ".join(path_astar))
+print("Total distance:", total_distance_astar)
+print("Execution time:", execution_time_astar, "sec")
